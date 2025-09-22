@@ -1,4 +1,4 @@
-# main.py
+# client.py
 import json
 import random
 import time
@@ -8,40 +8,36 @@ import pandas as pd
 import requests
 from joblib import load
 from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import (
-    MinMaxScaler,
-    OneHotEncoder,
-    StandardScaler,
-)
-
+from sklearn.preprocessing import MinMaxScaler, OneHotEncoder, StandardScaler
 
 from preprocessing import preprocess_dataframe, build_preprocessor
 
 
 def main() -> None:
-    """Load data, preprocess, and send requests to KServe model."""
+    """Client that streams random requests to FastAPI prediction endpoint."""
+    # Load data and model
     df = pd.read_csv("test.csv").drop(columns=["isFraud"], errors="ignore")
-
-    # Hyphatia-style preprocessing
     df = preprocess_dataframe(df)
 
     model = load("model.joblib")
     expected = int(model.n_features_in_)
 
+    # Preprocess
     preprocessor = build_preprocessor(df)
     Xt = preprocessor.fit_transform(df)
 
-    # Adjust dimensions to match model input
+    # Align features with model input
     if Xt.shape[1] > expected:
         Xt = Xt[:, :expected]
     elif Xt.shape[1] < expected:
         padding = np.zeros((Xt.shape[0], expected - Xt.shape[1]))
         Xt = np.hstack([Xt, padding])
 
-    url = "http://127.0.0.1:8080/v1/models/sklearn-model:predict"
+    # FastAPI endpoint
+    url = "http://127.0.0.1:8000/predict"  # change if running remotely
     headers = {"Content-Type": "application/json"}
 
-    print(f"Client ready. Sending requests to {url} every 0.1s...\n")
+    print(f"Client ready. Sending requests every 0.1s to {url}...\n")
 
     while True:
         idx = random.randint(0, Xt.shape[0] - 1)
@@ -50,9 +46,11 @@ def main() -> None:
 
         try:
             response = requests.post(url, headers=headers, data=json.dumps(payload))
-            print(f"[Row {idx}] Status {response.status_code}: {response.text}")
+            resp_json = response.json()
+            predictions = resp_json.get("response", {}).get("predictions", [])
+            print(f"[Row {idx}] -> Predictions: {predictions}")
         except Exception as e:
-            print(f"Error in request: {e}")
+            print(f"Request error: {e}")
 
         time.sleep(0.1)
 

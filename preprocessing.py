@@ -1,11 +1,6 @@
-# make_input_json_10.py
-import argparse
-import json
-from pathlib import Path
-
-import numpy as np
+# preprocessing.py
 import pandas as pd
-from joblib import load
+import numpy as np
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder, StandardScaler
 
@@ -67,71 +62,15 @@ def preprocess_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def main() -> None:
-    """Generate a JSON file with N preprocessed rows for inference."""
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--test", default="test.csv")
-    parser.add_argument("--model", default="model.joblib")
-    parser.add_argument("--expected", type=int, default=None)
-    parser.add_argument("--out", default="input_numeric_10.json")
-    parser.add_argument("--n", type=int, default=10)
-    args = parser.parse_args()
-
-    df = pd.read_csv(args.test)
-    X = df.drop(columns=["isFraud"], errors="ignore")
-
-    # Apply Hyphatia-style preprocessing
-    X = preprocess_dataframe(X)
-
+def build_preprocessor(X: pd.DataFrame) -> ColumnTransformer:
+    """Build column transformer with scaling and one-hot encoding."""
     categorical_cols = X.select_dtypes(include=["object", "category"]).columns.tolist()
     numeric_cols = X.select_dtypes(include=[np.number]).columns.tolist()
 
-    preprocessor = ColumnTransformer(
+    return ColumnTransformer(
         transformers=[
             ("num_std", StandardScaler(), numeric_cols),
             ("num_minmax", MinMaxScaler(), numeric_cols),
             ("cat", safe_ohe(), categorical_cols),
         ]
     )
-
-    Xt = preprocessor.fit_transform(X)
-
-    if args.expected is not None:
-        expected = int(args.expected)
-    else:
-        model_path = Path(args.model)
-        if not model_path.exists():
-            raise FileNotFoundError(
-                f"{args.model} not found. Use --expected or provide model.joblib."
-            )
-        model = load(args.model)
-        expected = int(model.n_features_in_)
-
-    # Adjust dimensions to match model input
-    if Xt.shape[1] > expected:
-        Xt = Xt[:, :expected]
-    elif Xt.shape[1] < expected:
-        padding = np.zeros((Xt.shape[0], expected - Xt.shape[1]))
-        Xt = np.hstack([Xt, padding])
-
-    # Select N rows
-    n = args.n
-    if Xt.shape[0] >= n:
-        rows = Xt[:n]
-    else:
-        reps = (n + Xt.shape[0] - 1) // Xt.shape[0]
-        rows = np.vstack([Xt] * reps)[:n]
-
-    payload = {"instances": rows.tolist()}
-
-    with open(args.out, "w") as f:
-        json.dump(payload, f, indent=2)
-
-    print(
-        f"✅ Generated {args.out} with {len(rows)} instances, "
-        f"each with {expected} features"
-    )
-
-
-if __name__ == "__main__":
-    main()
