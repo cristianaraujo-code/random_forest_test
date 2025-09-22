@@ -31,30 +31,30 @@ def build_preprocessor(X):
 
 
 def main():
-    # 🔹 cargar dataset y modelo
+    # Load data and model
     df = pd.read_csv("test.csv").drop(columns=["isFraud"], errors="ignore")
     model = load("model.joblib")
     expected = int(model.n_features_in_)
 
-    # 🔹 armar preprocesador y transformar
+    # Create preprocessor and transform data
     preprocessor = build_preprocessor(df)
     Xt = preprocessor.fit_transform(df)
 
-    # 🔹 ajustar dimensiones
+    # adjust dimensions
     if Xt.shape[1] > expected:
         Xt = Xt[:, :expected]
     elif Xt.shape[1] < expected:
         padding = np.zeros((Xt.shape[0], expected - Xt.shape[1]))
         Xt = np.hstack([Xt, padding])
 
-    # 🔹 endpoint expuesto por port-forward
+    # endpoint exposed by port-forward
     URL = "http://127.0.0.1:8081/v1/models/sklearn-model:predict"
     HEADERS = {"Content-Type": "application/json"}
 
-    print(f"✅ Cliente listo. Enviando requests a {URL} cada 0.1s...\n")
+    print(f"✅ Client ready. Sending requests to {URL} every 0.1s...\n")
 
     while True:
-        # elegir una fila random ya preprocesada
+        # choose a random row already preprocessed
         idx = random.randint(0, Xt.shape[0] - 1)
         row = Xt[idx].tolist()
 
@@ -62,9 +62,9 @@ def main():
 
         try:
             response = requests.post(URL, headers=HEADERS, data=json.dumps(payload))
-            print(f"[Fila {idx}] Status {response.status_code}: {response.text}")
+            print(f"[Row {idx}] Status {response.status_code}: {response.text}")
         except Exception as e:
-            print(f"❌ Error en la petición: {e}")
+            print(f"❌ Error in request: {e}")
 
         time.sleep(0.01)
 
