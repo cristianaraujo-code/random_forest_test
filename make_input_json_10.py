@@ -2,22 +2,33 @@
 import argparse
 import json
 from pathlib import Path
+<<<<<<< HEAD
 
+=======
+>>>>>>> f190003 (The model is running over Kserve, the inference was test and pass)
 import numpy as np
 import pandas as pd
 from joblib import load
 from sklearn.compose import ColumnTransformer
+<<<<<<< HEAD
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder, StandardScaler
 
 
 def safe_ohe() -> OneHotEncoder:
     """Return OneHotEncoder with backward compatibility across sklearn versions."""
+=======
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+
+
+def safe_ohe():
+>>>>>>> f190003 (The model is running over Kserve, the inference was test and pass)
     try:
         return OneHotEncoder(handle_unknown="ignore", sparse_output=False)
     except TypeError:
         return OneHotEncoder(handle_unknown="ignore", sparse=False)
 
 
+<<<<<<< HEAD
 def preprocess_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     """
     Apply preprocessing inspired by the Hyphatia paper (IEEE-CIS dataset).
@@ -69,6 +80,9 @@ def preprocess_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
 def main() -> None:
     """Generate a JSON file with N preprocessed rows for inference."""
+=======
+def main():
+>>>>>>> f190003 (The model is running over Kserve, the inference was test and pass)
     parser = argparse.ArgumentParser()
     parser.add_argument("--test", default="test.csv")
     parser.add_argument("--model", default="model.joblib")
@@ -80,16 +94,24 @@ def main() -> None:
     df = pd.read_csv(args.test)
     X = df.drop(columns=["isFraud"], errors="ignore")
 
+<<<<<<< HEAD
     # Apply Hyphatia-style preprocessing
     X = preprocess_dataframe(X)
 
     categorical_cols = X.select_dtypes(include=["object", "category"]).columns.tolist()
+=======
+    categorical_cols = X.select_dtypes(include=['object', 'category']).columns.tolist()
+>>>>>>> f190003 (The model is running over Kserve, the inference was test and pass)
     numeric_cols = X.select_dtypes(include=[np.number]).columns.tolist()
 
     preprocessor = ColumnTransformer(
         transformers=[
+<<<<<<< HEAD
             ("num_std", StandardScaler(), numeric_cols),
             ("num_minmax", MinMaxScaler(), numeric_cols),
+=======
+            ("num", StandardScaler(), numeric_cols),
+>>>>>>> f190003 (The model is running over Kserve, the inference was test and pass)
             ("cat", safe_ohe(), categorical_cols),
         ]
     )
@@ -101,6 +123,7 @@ def main() -> None:
     else:
         model_path = Path(args.model)
         if not model_path.exists():
+<<<<<<< HEAD
             raise FileNotFoundError(
                 f"{args.model} not found. Use --expected or provide model.joblib."
             )
@@ -108,13 +131,22 @@ def main() -> None:
         expected = int(model.n_features_in_)
 
     # Adjust dimensions to match model input
+=======
+            raise FileNotFoundError(f"No existe {args.model}. Pasa --expected o coloca model.joblib en el directorio.")
+        model = load(args.model)
+        expected = int(model.n_features_in_)
+
+>>>>>>> f190003 (The model is running over Kserve, the inference was test and pass)
     if Xt.shape[1] > expected:
         Xt = Xt[:, :expected]
     elif Xt.shape[1] < expected:
         padding = np.zeros((Xt.shape[0], expected - Xt.shape[1]))
         Xt = np.hstack([Xt, padding])
 
+<<<<<<< HEAD
     # Select N rows
+=======
+>>>>>>> f190003 (The model is running over Kserve, the inference was test and pass)
     n = args.n
     if Xt.shape[0] >= n:
         rows = Xt[:n]
@@ -127,10 +159,14 @@ def main() -> None:
     with open(args.out, "w") as f:
         json.dump(payload, f, indent=2)
 
+<<<<<<< HEAD
     print(
         f"✅ Generated {args.out} with {len(rows)} instances, "
         f"each with {expected} features"
     )
+=======
+    print(f"✅ Generado {args.out} con {len(rows)} instancias, cada una con {expected} features")
+>>>>>>> f190003 (The model is running over Kserve, the inference was test and pass)
 
 
 if __name__ == "__main__":
