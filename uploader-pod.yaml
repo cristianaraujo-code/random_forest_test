@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: uploader
+  namespace: ns-test-model
+spec:
+  containers:
+    - name: uploader
+      image: busybox
+      command: ["/bin/sh", "-c", "sleep 3600"]
+      volumeMounts:
+        - mountPath: /mnt
+          name: modelstore
+  volumes:
+    - name: modelstore
+      persistentVolumeClaim:
+        claimName: model-pvc
+  restartPolicy: Never
