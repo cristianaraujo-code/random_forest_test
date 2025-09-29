@@ -52,7 +52,7 @@ def main() -> None:
         except Exception as e:
             print(f"Request error: {e}")
 
-        time.sleep(0.1)
+        time.sleep(0.001)
 
 
 if __name__ == "__main__":
