@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ml-inference
+---
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: sklearn-model
+  namespace: ml-inference
+spec:
+  predictor:
+    scaleTarget: # configuración de escalado
+      minReplicas: 1
+      maxReplicas: 4
+      containerConcurrency: 1
+    containers:
+      - name: kserve-container
+        image: cristianaraujo12/sklearn-kserve:latest
+        env:
+          - name: AWS_ENDPOINT_URL
+            value: "http://172.22.10.164:9000"
+          - name: AWS_ACCESS_KEY_ID
+            value: "minioadmin"
+          - name: AWS_SECRET_ACCESS_KEY
+            value: "minioadmin123"
+        args:
+          - --model_dir
+          - "s3://k8s-models/model.joblib"
+        resources:
+          requests:
+            cpu: "400m"
+            memory: "1Gi"
+          limits:
+            cpu: "800m"
+            memory: "2Gi"
+---
+# NodePort Service to expose the KServe predictor externally
+apiVersion: v1
+kind: Service
+metadata:
+  name: sklearn-model-nodeport
+  namespace: ml-inference
+spec:
+  type: NodePort
+  selector:
+    serving.kserve.io/inferenceservice: sklearn-model
+    serving.kserve.io/predictor: predictor
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+      nodePort: 30080

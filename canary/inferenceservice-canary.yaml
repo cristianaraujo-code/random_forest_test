@@ -1,0 +1,51 @@
+
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: sklearn-canary
+  namespace: ns-test-model
+spec:
+  predictor:
+    containers:
+      - name: kserve-container
+        image: sklearn-custom:0.1
+        imagePullPolicy: IfNotPresent
+        args:
+          - --model_dir=/mnt/sklearn-model-v1
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "512Mi"
+          limits:
+            cpu: "1"
+            memory: "1Gi"
+        volumeMounts:
+          - mountPath: /mnt
+            name: model-storage
+    volumes:
+      - name: model-storage
+        persistentVolumeClaim:
+          claimName: model-pvc
+  canary:
+    predictor:
+      containers:
+        - name: kserve-container
+          image: sklearn-custom:0.1
+          imagePullPolicy: IfNotPresent
+          args:
+            - --model_dir=/mnt/sklearn-model-v2
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+          volumeMounts:
+            - mountPath: /mnt
+              name: model-storage
+      volumes:
+        - name: model-storage
+          persistentVolumeClaim:
+            claimName: model-pvc
+  canaryTrafficPercent: 30
